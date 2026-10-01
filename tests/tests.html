@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tests – Seuils météo</title>
+<style>
+  body { font: 16px/1.5 system-ui, sans-serif; max-width: 42rem; margin: 2rem auto; padding: 0 1rem; }
+  li { list-style: none; } .ok::before { content: "✓ "; color: #1a7f37; } .ko::before { content: "✗ "; color: #c62828; }
+  .ko { color: #c62828; } h1 { font-size: 1.3rem; }
+</style>
+</head>
+<body>
+<h1>Tests de la logique des seuils</h1>
+<p id="bilan">…</p>
+<ul id="liste"></ul>
+<script type="module">
+  import { tests } from './thresholds.test.js';
+  let echecs = 0;
+  for (const [nom, fn] of tests) {
+    const li = document.createElement('li');
+    try { fn(); li.className = 'ok'; li.textContent = nom; }
+    catch (e) { echecs++; li.className = 'ko'; li.textContent = `${nom} — ${e.message}`; }
+    document.getElementById('liste').append(li);
+  }
+  document.getElementById('bilan').textContent = `${tests.length - echecs}/${tests.length} tests réussis`;
+</script>
+</body>
+</html>

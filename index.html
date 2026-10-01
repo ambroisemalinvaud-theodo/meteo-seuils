@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Seuils météo</title>
+  <meta name="description" content="Dernière fois qu'une température seuil a été atteinte dans une ville.">
+  <meta name="theme-color" content="#1d6fb8" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#12385c" media="(prefers-color-scheme: dark)">
+  <meta name="color-scheme" content="light dark">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Seuils météo">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" type="image/svg+xml" href="icons/icon.svg">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <header class="entete">
+    <div class="entete-in">
+      <h1>Seuils météo</h1>
+      <div class="recherche">
+        <label for="ville" class="sr">Rechercher une ville</label>
+        <input id="ville" type="search" placeholder="Rechercher une ville…" autocomplete="off" autocapitalize="off"
+               spellcheck="false" role="combobox" aria-expanded="false" aria-controls="suggestions" aria-autocomplete="list">
+        <ul id="suggestions" role="listbox" hidden></ul>
+      </div>
+      <div id="villes-memo" class="memo" hidden></div>
+    </div>
+  </header>
+
+  <div id="maj" class="bandeau" role="status" hidden>
+    <span>Une nouvelle version de l'application est disponible.</span>
+    <button type="button" id="maj-ok">Mettre à jour</button>
+    <button type="button" id="maj-non" class="discret">Plus tard</button>
+  </div>
+
+  <main class="app">
+    <div id="erreur" class="erreur" role="alert" hidden></div>
+
+    <section class="statut" aria-live="polite">
+      <div class="statut-ligne">
+        <p id="statut" class="statut-texte">Choisissez une ville pour commencer.</p>
+        <button type="button" id="rafraichir" class="btn" disabled>Rafraîchir</button>
+      </div>
+      <div id="progression" class="progression" hidden>
+        <progress id="barre" max="100" value="0"></progress>
+        <span id="progression-texte">Téléchargement de l'historique…</span>
+      </div>
+    </section>
+
+    <details class="reglages" id="reglages" open>
+      <summary>Réglages <span id="reglages-resume" class="muted"></span></summary>
+      <div class="reglages-grille">
+        <fieldset class="seg">
+          <legend>Mesure</legend>
+          <label><input type="radio" name="measure" value="tx"><span>Maximale (Tx)</span></label>
+          <label><input type="radio" name="measure" value="tn"><span>Minimale (Tn)</span></label>
+        </fieldset>
+        <fieldset class="seg">
+          <legend>Sens</legend>
+          <label><input type="radio" name="direction" value="ge"><span>Atteint ou dépasse (≥)</span></label>
+          <label><input type="radio" name="direction" value="le"><span>Atteint ou descend sous (≤)</span></label>
+        </fieldset>
+        <fieldset class="seg">
+          <legend>Pas des seuils</legend>
+          <label><input type="radio" name="step" value="1"><span>1 °C</span></label>
+          <label><input type="radio" name="step" value="2"><span>2 °C</span></label>
+          <label><input type="radio" name="step" value="5"><span>5 °C</span></label>
+        </fieldset>
+      </div>
+    </details>
+
+    <div class="onglets" role="tablist" aria-label="Affichage">
+      <button type="button" role="tab" id="tab-tableau" aria-controls="panneau-tableau" aria-selected="true">Tableau</button>
+      <button type="button" role="tab" id="tab-calendrier" aria-controls="panneau-calendrier" aria-selected="false">Calendrier</button>
+    </div>
+
+    <div class="panneaux">
+      <section id="panneau-tableau" class="panneau actif" role="tabpanel" aria-labelledby="tab-tableau">
+        <h2>Seuils</h2>
+        <p class="aide">Touchez une ligne pour repérer ces jours dans le calendrier.</p>
+        <div class="table-wrap" id="table-wrap" tabindex="0" aria-label="Tableau des seuils (défile horizontalement)"></div>
+      </section>
+
+      <section id="panneau-calendrier" class="panneau" role="tabpanel" aria-labelledby="tab-calendrier">
+        <h2>Calendrier</h2>
+        <div class="annee">
+          <button type="button" id="annee-prec" class="btn icone" aria-label="Année précédente">‹</button>
+          <label class="sr" for="annee">Année</label>
+          <select id="annee"></select>
+          <button type="button" id="annee-suiv" class="btn icone" aria-label="Année suivante">›</button>
+        </div>
+        <p id="cal-resume" class="aide"></p>
+        <div id="calendrier" class="calendrier"></div>
+        <div class="legende" aria-hidden="true">
+          <span>−10 °C</span><div id="legende-barre" class="legende-barre"></div><span>40 °C</span>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <footer class="pied">
+    <p>Données : <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo</a>.
+       Il s'agit d'une réanalyse (modélisation sur grille) : les valeurs peuvent différer de quelques degrés
+       de celles d'une station météo officielle. Aucune donnée personnelle n'est collectée.</p>
+  </footer>
+
+  <div id="infobulle" class="infobulle" role="tooltip" hidden></div>
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>

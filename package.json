@@ -1,0 +1,7 @@
+{
+  "name": "meteo-seuils",
+  "private": true,
+  "type": "module",
+  "description": "Uniquement utile pour lancer les tests avec Node (npm test). L'app elle-même n'a aucune dépendance."
+  ,"scripts": { "test": "node tests/run-node.mjs" }
+}
