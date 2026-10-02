@@ -1,6 +1,7 @@
 import { computeThresholds, thresholdList, reaches } from '../js/thresholds.js';
 import { addDays, formatLong, isoToDay, weekdayMonday0 } from '../js/dates.js';
 import { emptySeries, mergeDaily, lastIso } from '../js/series.js';
+import { answerQuestion, phrase } from '../js/questions.js';
 
 const serie = (tx, tn = tx.map(() => 0), start = '2026-01-01') => ({ start, tx, tn });
 const ligne = (s, t, o = {}) => computeThresholds(s, { min: t, max: t, ...o })[0];
@@ -84,5 +85,34 @@ export const tests = [
     // canWrite refuse d’écraser
     mergeDaily(s, { time: ['2026-01-01'], temperature_2m_max: [99], temperature_2m_min: [99] }, (iso, old) => old == null);
     egal(s.tx[0], 5);
+  }],
+  ['question : jamais atteint / aujourd’hui / il y a N jours', () => {
+    const s = serie([10, 20, 5, 5, 5]);
+    egal(answerQuestion(s, { measure: 'tx', direction: 'ge', threshold: 30, period: 'all' }).lastIso, null);
+    const a = answerQuestion(s, { measure: 'tx', direction: 'ge', threshold: 20, period: 'all' });
+    egal([a.lastIso, a.daysAgo, a.count], ['2026-01-02', 3, 1]);
+    const b = answerQuestion(s, { measure: 'tx', direction: 'le', threshold: 5, period: 'all' });
+    egal([b.daysAgo, b.count], [0, 3]);
+  }],
+  ['question : période année (cy, y:) ne compte que cette année', () => {
+    const s = serie([30, 30, 30, 30, 30], undefined, '2025-12-30'); // 30/12, 31/12, 01/01, 02/01, 03/01
+    const q = (period) => answerQuestion(s, { measure: 'tx', direction: 'ge', threshold: 30, period });
+    egal([q('cy').count, q('cy').year, q('cy').elapsedDays], [3, 2026, 3]);
+    egal([q('y:2025').count, q('y:2025').elapsedDays], [2, 2]); // la série ne commence que le 30/12
+    egal(q('y:2030').count, 0);
+  }],
+  ['question : fenêtres 30 jours et 365 jours', () => {
+    const tx = Array(60).fill(0); tx[29] = 25; tx[30] = 25; // ref = 59 : idx 30 dans la fenêtre (29 jours avant), idx 29 hors
+    const s = serie(tx);
+    egal(answerQuestion(s, { measure: 'tx', direction: 'ge', threshold: 25, period: '30' }).count, 1);
+    egal(answerQuestion(s, { measure: 'tx', direction: 'ge', threshold: 25, period: '365' }).count, 2);
+  }],
+  ['question : phrase en français', () => {
+    const s = serie([10, 20, 5]);
+    const city = { name: 'Saint-Cloud' };
+    const p = phrase(city, { measure: 'tn', direction: 'le', threshold: 8 }, answerQuestion(s, { measure: 'tn', direction: 'le', threshold: 8, period: 'all' }));
+    if (!p.includes('Pour Saint-Cloud') || !p.includes('minimale') || !p.includes('aujourd')) throw new Error(p);
+    const j = phrase(city, { measure: 'tx', direction: 'ge', threshold: 38 }, { daysAgo: null });
+    if (!j.includes('jamais atteint')) throw new Error(j);
   }],
 ];

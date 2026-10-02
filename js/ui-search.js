@@ -46,7 +46,7 @@ export function initSearch({ input, list, onPick }) {
     results.forEach((c, i) => {
       const li = document.createElement('li');
       li.setAttribute('role', 'option');
-      li.id = `sugg-${i}`;
+      li.id = `${list.id}-${i}`;
       const nom = document.createElement('strong');
       nom.textContent = c.name;
       const detail = document.createElement('span');

@@ -23,3 +23,9 @@ export function loadSettings() {
 export const saveSettings = (s) => ecrire('reglages', s);
 export const loadLastCity = () => lire('ville', null);
 export const saveLastCity = (c) => ecrire('ville', c);
+
+// Questions rapides : favoris et dernier formulaire
+export const loadFavoris = () => (Array.isArray(lire('favoris', [])) ? lire('favoris', []) : []);
+export const saveFavoris = (f) => ecrire('favoris', f);
+export const loadFormQ = () => lire('formulaire-q', {});
+export const saveFormQ = (f) => ecrire('formulaire-q', f);

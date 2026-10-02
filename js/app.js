@@ -1,9 +1,11 @@
 // Point d'entrée : relie les modules, garde l'état de l'application.
 import { computeThresholds } from './thresholds.js';
-import { addDays, formatLong, isoToDay, todayUtcIso } from './dates.js';
+import { formatLong, todayUtcIso } from './dates.js';
 import { lastIso } from './series.js';
-import { ApiError, syncSeries } from './api.js';
-import { getCity, listCities, putCity } from './db.js';
+import { ApiError } from './api.js';
+import { listCities } from './db.js';
+import { isStale, readCached, updateSeries } from './store.js';
+import { initQuestions } from './ui-questions.js';
 import { loadLastCity, loadSettings, saveLastCity, saveSettings } from './settings.js';
 import { cityLabel, initSearch } from './ui-search.js';
 import { renderTable } from './ui-table.js';
@@ -11,7 +13,6 @@ import { initTooltip, legendGradient, renderHeatmap } from './ui-heatmap.js';
 import { formatTemp } from './ui-table.js';
 
 const $ = (id) => document.getElementById(id);
-const FRAICHEUR_MS = 6 * 3600 * 1000; // on remet à jour automatiquement après 6 h
 
 const state = {
   city: null,
@@ -27,7 +28,7 @@ const state = {
 
 function resumeReglages() {
   const { measure, direction, step } = state.settings;
-  $('reglages-resume').textContent = `· ${measure === 'tx' ? 'Tx' : 'Tn'} ${direction === 'ge' ? '≥' : '≤'} · pas ${step} °C`;
+  $('reglages-btn').textContent = `${measure === 'tx' ? 'Tx maximale' : 'Tn minimale'} ${direction === 'ge' ? '≥' : '≤'} · pas ${step} °C`;
 }
 
 function showError(msg) {
@@ -130,22 +131,18 @@ async function ouvrirVille(city, { force = false } = {}) {
   $('ville').value = cityLabel(city);
   showError('');
 
-  let enCache = null;
-  try { enCache = await getCity(city.key); } catch { /* IndexedDB indisponible : on télécharge */ }
+  const enCache = await readCached(city);
   if (token !== state.token) return;
   state.series = enCache;
   state.year = Number(todayUtcIso().slice(0, 4));
   render();
   if (!enCache) $('statut').textContent = `${cityLabel(city)} : téléchargement de l'historique…`;
 
-  const perime = !enCache || force || Date.now() - (enCache.updated || 0) > FRAICHEUR_MS;
-  if (!perime) return;
+  if (!force && !isStale(enCache)) return;
   $('rafraichir').disabled = true;
   if (!enCache) setProgress(0);
   try {
-    const serie = await syncSeries(city, enCache, !enCache ? (p) => token === state.token && setProgress(p) : undefined);
-    Object.assign(serie, { key: city.key, name: city.name, admin1: city.admin1, admin2: city.admin2, country: city.country, lat: city.lat, lon: city.lon });
-    try { await putCity(serie); } catch { /* stockage impossible : l'affichage reste correct */ }
+    const serie = await updateSeries(city, enCache, (p) => token === state.token && setProgress(p));
     if (token === state.token) { state.series = serie; render(); }
     majVillesMemo();
   } catch (e) {
@@ -177,28 +174,30 @@ async function majVillesMemo() {
 /* ---------- Événements ---------- */
 
 function initReglages() {
+  const dlg = $('dlg-reglages');
   for (const [nom, val] of Object.entries(state.settings)) {
-    const radio = document.querySelector(`input[name="${nom}"][value="${val}"]`);
+    const radio = dlg.querySelector(`input[name="${nom}"][value="${val}"]`);
     if (radio) radio.checked = true;
   }
-  document.querySelectorAll('.seg input').forEach((r) => r.addEventListener('change', () => {
+  dlg.querySelectorAll('.seg input').forEach((r) => r.addEventListener('change', () => {
     state.settings = { ...state.settings, [r.name]: r.name === 'step' ? Number(r.value) : r.value };
     saveSettings(state.settings);
     render();
   }));
-  if (window.matchMedia('(max-width: 959px)').matches) $('reglages').open = false;
+  $('reglages-btn').addEventListener('click', () => dlg.showModal());
+  dlg.addEventListener('click', (e) => { if (e.target === dlg) dlg.close(); }); // toucher le fond ferme la feuille
+}
+
+let questions = null;
+function setView(view) {
+  document.body.dataset.view = view;
+  document.querySelectorAll('.tabbar [role="tab"]').forEach((t) => t.setAttribute('aria-selected', String(t.dataset.view === view)));
+  window.scrollTo(0, 0);
+  if (view === 'questions') questions?.poser();
 }
 
 function initOnglets() {
-  const tabs = [['tab-tableau', 'panneau-tableau'], ['tab-calendrier', 'panneau-calendrier']];
-  for (const [tabId, panId] of tabs) {
-    $(tabId).addEventListener('click', () => {
-      for (const [t, p] of tabs) {
-        $(t).setAttribute('aria-selected', String(t === tabId));
-        $(p).classList.toggle('actif', p === panId);
-      }
-    });
-  }
+  document.querySelectorAll('.tabbar [role="tab"]').forEach((t) => t.addEventListener('click', () => setView(t.dataset.view)));
 }
 
 function initAnnee() {
@@ -242,6 +241,9 @@ function main() {
   initAnnee();
   initSearch({ input: $('ville'), list: $('suggestions'), onPick: (c) => ouvrirVille(c) });
   initTooltip($('calendrier'), $('infobulle'), () => state.series, () => ({ ...state.settings, threshold: state.selected }));
+  questions = initQuestions({
+    defaultCity: loadLastCity(), readCached, isStale, updateSeries, onStored: majVillesMemo,
+  });
   $('rafraichir').addEventListener('click', () => state.city && ouvrirVille(state.city, { force: true }));
   initServiceWorker();
   majVillesMemo();

@@ -17,7 +17,7 @@
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
   <link rel="stylesheet" href="css/styles.css">
 </head>
-<body>
+<body data-view="seuils">
   <header class="entete">
     <div class="entete-in">
       <h1>Seuils météo</h1>
@@ -25,7 +25,7 @@
         <label for="ville" class="sr">Rechercher une ville</label>
         <input id="ville" type="search" placeholder="Rechercher une ville…" autocomplete="off" autocapitalize="off"
                spellcheck="false" role="combobox" aria-expanded="false" aria-controls="suggestions" aria-autocomplete="list">
-        <ul id="suggestions" role="listbox" hidden></ul>
+        <ul id="suggestions" class="suggestions" role="listbox" hidden></ul>
       </div>
       <div id="villes-memo" class="memo" hidden></div>
     </div>
@@ -37,12 +37,28 @@
     <button type="button" id="maj-non" class="discret">Plus tard</button>
   </div>
 
+  <nav class="tabbar" role="tablist" aria-label="Sections">
+    <button type="button" role="tab" id="tab-tableau" data-view="seuils" aria-controls="panneau-tableau" aria-selected="true">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h10"/></svg>
+      <span class="lib-m">Seuils</span><span class="lib-d">Seuils et calendrier</span>
+    </button>
+    <button type="button" role="tab" id="tab-calendrier" data-view="calendrier" aria-controls="panneau-calendrier" aria-selected="false">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 10h16M9 3v4M15 3v4"/></svg>
+      <span>Calendrier</span>
+    </button>
+    <button type="button" role="tab" id="tab-questions" data-view="questions" aria-controls="panneau-questions" aria-selected="false">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.7.4-1 .9-1 1.7M12 17h.01"/></svg>
+      <span>Questions</span>
+    </button>
+  </nav>
+
   <main class="app">
     <div id="erreur" class="erreur" role="alert" hidden></div>
 
     <section class="statut" aria-live="polite">
-      <div class="statut-ligne">
-        <p id="statut" class="statut-texte">Choisissez une ville pour commencer.</p>
+      <p id="statut" class="statut-texte">Choisissez une ville pour commencer.</p>
+      <div class="barre">
+        <button type="button" id="reglages-btn" class="chip" aria-haspopup="dialog">Réglages</button>
         <button type="button" id="rafraichir" class="btn" disabled>Rafraîchir</button>
       </div>
       <div id="progression" class="progression" hidden>
@@ -51,8 +67,93 @@
       </div>
     </section>
 
-    <details class="reglages" id="reglages" open>
-      <summary>Réglages <span id="reglages-resume" class="muted"></span></summary>
+    <div class="panneaux">
+      <section id="panneau-tableau" class="panneau" role="tabpanel" aria-labelledby="tab-tableau">
+        <h2>Seuils</h2>
+        <p class="aide">Touchez une ligne pour repérer ces jours dans le calendrier.</p>
+        <div class="table-wrap" id="table-wrap" tabindex="0" aria-label="Tableau des seuils (défile horizontalement)"></div>
+      </section>
+
+      <section id="panneau-calendrier" class="panneau" role="tabpanel" aria-labelledby="tab-calendrier">
+        <h2>Calendrier</h2>
+        <div class="carte">
+          <div class="annee">
+            <button type="button" id="annee-prec" class="btn icone" aria-label="Année précédente">‹</button>
+            <label class="sr" for="annee">Année</label>
+            <select id="annee"></select>
+            <button type="button" id="annee-suiv" class="btn icone" aria-label="Année suivante">›</button>
+          </div>
+          <p id="cal-resume" class="aide"></p>
+          <div id="calendrier" class="calendrier"></div>
+          <div class="legende" aria-hidden="true">
+            <span>−10 °C</span><div id="legende-barre" class="legende-barre"></div><span>40 °C</span>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <section id="panneau-questions" class="panneau" role="tabpanel" aria-labelledby="tab-questions">
+      <h2>Questions rapides</h2>
+      <p class="aide">Complétez la phrase : la réponse s'affiche tout de suite. Indépendant de la ville choisie plus haut.</p>
+      <div id="q-favs" class="favs"></div>
+
+      <form id="q-form" class="carte form-q" autocomplete="off">
+        <div class="champ">
+          <label for="q-ville">Ville</label>
+          <div class="recherche">
+            <input id="q-ville" type="search" placeholder="Rechercher une ville…" autocomplete="off" autocapitalize="off"
+                   spellcheck="false" role="combobox" aria-expanded="false" aria-controls="q-suggestions" aria-autocomplete="list">
+            <ul id="q-suggestions" class="suggestions" role="listbox" hidden></ul>
+          </div>
+        </div>
+        <div class="deux">
+          <fieldset class="seg">
+            <legend>Mesure</legend>
+            <label><input type="radio" name="qmeasure" value="tx"><span>Maximale (Tx)</span></label>
+            <label><input type="radio" name="qmeasure" value="tn"><span>Minimale (Tn)</span></label>
+          </fieldset>
+          <fieldset class="seg">
+            <legend>Sens</legend>
+            <label><input type="radio" name="qdirection" value="ge"><span>Atteint ou dépasse (≥)</span></label>
+            <label><input type="radio" name="qdirection" value="le"><span>Descend à ou sous (≤)</span></label>
+          </fieldset>
+        </div>
+        <div class="deux">
+          <div class="champ">
+            <label for="q-seuil">Seuil (°C)</label>
+            <div class="stepper">
+              <button type="button" id="q-moins" class="btn icone" aria-label="Diminuer d'un degré">−</button>
+              <input id="q-seuil" type="text" inputmode="decimal" autocomplete="off" enterkeyhint="done">
+              <button type="button" id="q-plus" class="btn icone" aria-label="Augmenter d'un degré">+</button>
+            </div>
+          </div>
+          <div class="champ">
+            <label for="q-periode">Période du comptage</label>
+            <select id="q-periode"></select>
+          </div>
+        </div>
+        <button type="button" id="q-etoile" class="btn" aria-pressed="false">☆ Enregistrer cette question</button>
+      </form>
+
+      <div id="q-prog" class="progression" hidden>
+        <progress id="q-barre" max="100" value="0"></progress>
+        <span id="q-prog-texte">Téléchargement de l'historique…</span>
+      </div>
+      <div id="q-erreur" class="erreur" role="alert" hidden></div>
+      <div id="q-resultat" aria-live="polite"></div>
+    </section>
+  </main>
+
+  <footer class="pied">
+    <p>Données : <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo</a>.
+       Il s'agit d'une réanalyse (modélisation sur grille) : les valeurs peuvent différer de quelques degrés
+       de celles d'une station météo officielle. Aucune donnée personnelle n'est collectée.</p>
+  </footer>
+
+  <dialog id="dlg-reglages" class="feuille" aria-labelledby="dlg-titre">
+    <form method="dialog">
+      <h2 id="dlg-titre">Réglages</h2>
+      <p class="aide">Valables pour le tableau et le calendrier.</p>
       <div class="reglages-grille">
         <fieldset class="seg">
           <legend>Mesure</legend>
@@ -71,42 +172,9 @@
           <label><input type="radio" name="step" value="5"><span>5 °C</span></label>
         </fieldset>
       </div>
-    </details>
-
-    <div class="onglets" role="tablist" aria-label="Affichage">
-      <button type="button" role="tab" id="tab-tableau" aria-controls="panneau-tableau" aria-selected="true">Tableau</button>
-      <button type="button" role="tab" id="tab-calendrier" aria-controls="panneau-calendrier" aria-selected="false">Calendrier</button>
-    </div>
-
-    <div class="panneaux">
-      <section id="panneau-tableau" class="panneau actif" role="tabpanel" aria-labelledby="tab-tableau">
-        <h2>Seuils</h2>
-        <p class="aide">Touchez une ligne pour repérer ces jours dans le calendrier.</p>
-        <div class="table-wrap" id="table-wrap" tabindex="0" aria-label="Tableau des seuils (défile horizontalement)"></div>
-      </section>
-
-      <section id="panneau-calendrier" class="panneau" role="tabpanel" aria-labelledby="tab-calendrier">
-        <h2>Calendrier</h2>
-        <div class="annee">
-          <button type="button" id="annee-prec" class="btn icone" aria-label="Année précédente">‹</button>
-          <label class="sr" for="annee">Année</label>
-          <select id="annee"></select>
-          <button type="button" id="annee-suiv" class="btn icone" aria-label="Année suivante">›</button>
-        </div>
-        <p id="cal-resume" class="aide"></p>
-        <div id="calendrier" class="calendrier"></div>
-        <div class="legende" aria-hidden="true">
-          <span>−10 °C</span><div id="legende-barre" class="legende-barre"></div><span>40 °C</span>
-        </div>
-      </section>
-    </div>
-  </main>
-
-  <footer class="pied">
-    <p>Données : <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo</a>.
-       Il s'agit d'une réanalyse (modélisation sur grille) : les valeurs peuvent différer de quelques degrés
-       de celles d'une station météo officielle. Aucune donnée personnelle n'est collectée.</p>
-  </footer>
+      <button type="submit" class="btn primaire">Terminé</button>
+    </form>
+  </dialog>
 
   <div id="infobulle" class="infobulle" role="tooltip" hidden></div>
   <script type="module" src="js/app.js"></script>

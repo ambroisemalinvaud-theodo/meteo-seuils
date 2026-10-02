@@ -6,7 +6,7 @@ const decimal = new Intl.NumberFormat('fr-FR', { minimumFractionDigits: 1, maxim
 
 export const formatTemp = (t) => `${new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 1 }).format(t).replace('-', '−')} °C`;
 
-function ilYa(jours) {
+export function ilYa(jours) {
   if (jours === 0) return "Aujourd'hui";
   if (jours === 1) return 'Hier';
   let txt = `${nombre.format(jours)} jours`;
@@ -62,13 +62,17 @@ export function renderTable(wrap, rows, { sort, selected, direction, onSelect, o
     tr.tabIndex = 0;
     tr.dataset.seuil = r.threshold;
     if (r.lastIso == null) tr.classList.add('jamais');
-    else if (r.daysAgo <= 7) tr.classList.add('recent1');
-    else if (r.daysAgo <= 30) tr.classList.add('recent2');
     if (r.threshold === selected) { tr.classList.add('choisi'); tr.setAttribute('aria-selected', 'true'); }
 
     tr.insertCell().textContent = `${signe} ${formatTemp(r.threshold)}`;
     tr.insertCell().textContent = r.lastIso ? formatLong(r.lastIso) : 'Jamais atteint';
-    tr.insertCell().textContent = r.lastIso ? ilYa(r.daysAgo) : '—';
+    const cIlYa = tr.insertCell();
+    if (r.lastIso) {
+      const pill = document.createElement('span');
+      pill.className = `pill${r.daysAgo <= 7 ? ' p1' : r.daysAgo <= 30 ? ' p2' : ''}`;
+      pill.textContent = ilYa(r.daysAgo);
+      cIlYa.append(pill);
+    } else cIlYa.textContent = '—';
     tr.insertCell().textContent = nombre.format(r.count365);
     tr.insertCell().textContent = r.avgPerYear == null ? '—' : decimal.format(r.avgPerYear);
     tr.cells[0].className = 'seuil';
