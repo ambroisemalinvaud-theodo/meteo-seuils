@@ -8,7 +8,7 @@ const ARCHIVE = 'https://archive-api.open-meteo.com/v1/archive';
 const FORECAST = 'https://api.open-meteo.com/v1/forecast';
 // L'archive a quelques jours de retard : on la demande jusqu'à J-6, le reste vient de "forecast".
 const RETARD_ARCHIVE_JOURS = 6;
-const OCTETS_PAR_JOUR = 22.5; // pour estimer la barre de progression
+const OCTETS_PAR_JOUR = 27; // pour estimer la barre de progression
 
 export class ApiError extends Error {
   constructor(kind, message) { super(message); this.kind = kind; }
@@ -75,13 +75,13 @@ export async function searchCities(name, signal) {
 function fetchArchive(city, from, to, onProgress) {
   const jours = (Date.parse(to) - Date.parse(from)) / 86400000;
   const url = `${ARCHIVE}?latitude=${city.lat}&longitude=${city.lon}&start_date=${from}&end_date=${to}`
-    + '&daily=temperature_2m_max,temperature_2m_min&timezone=auto';
+    + '&daily=temperature_2m_max,temperature_2m_min,temperature_2m_mean&timezone=auto';
   return getJson(url, { onProgress, estimatedBytes: jours * OCTETS_PAR_JOUR });
 }
 
 function fetchRecent(city, pastDays) {
   const url = `${FORECAST}?latitude=${city.lat}&longitude=${city.lon}`
-    + `&daily=temperature_2m_max,temperature_2m_min&past_days=${pastDays}&forecast_days=1&timezone=auto`;
+    + `&daily=temperature_2m_max,temperature_2m_min,temperature_2m_mean&past_days=${pastDays}&forecast_days=1&timezone=auto`;
   return getJson(url);
 }
 
@@ -91,6 +91,8 @@ function fetchRecent(city, pastDays) {
  */
 export async function syncSeries(city, existing, onProgress) {
   const series = existing || emptySeries(DEBUT_HISTORIQUE);
+  // Ancien cache sans températures moyennes : on retélécharge tout l'historique une fois.
+  if (!series.tm) { series.tm = []; series.archiveEnd = null; }
   const limite = addDays(todayUtcIso(), -RETARD_ARCHIVE_JOURS);
 
   if (!series.archiveEnd || series.archiveEnd < limite) {

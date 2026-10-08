@@ -14,7 +14,7 @@ function ecrire(nom, valeur) {
 
 export function loadSettings() {
   const s = { ...REGLAGES_DEFAUT, ...lire('reglages', {}) };
-  if (!['tx', 'tn'].includes(s.measure)) s.measure = 'tx';
+  if (!['tx', 'tn', 'tm'].includes(s.measure)) s.measure = 'tx';
   if (!['ge', 'le'].includes(s.direction)) s.direction = 'ge';
   if (![1, 2, 5].includes(Number(s.step))) s.step = 1;
   s.step = Number(s.step);

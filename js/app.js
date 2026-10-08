@@ -13,6 +13,7 @@ import { initTooltip, legendGradient, renderHeatmap } from './ui-heatmap.js';
 import { formatTemp } from './ui-table.js';
 
 const $ = (id) => document.getElementById(id);
+const NOM_MESURE = { tx: 'Max', tn: 'Min', tm: 'Moy' };
 
 const state = {
   city: null,
@@ -28,7 +29,7 @@ const state = {
 
 function resumeReglages() {
   const { measure, direction, step } = state.settings;
-  $('reglages-btn').textContent = `${measure === 'tx' ? 'Tx maximale' : 'Tn minimale'} ${direction === 'ge' ? '≥' : '≤'} · pas ${step} °C`;
+  $('reglages-btn').textContent = `${NOM_MESURE[measure]} ${direction === 'ge' ? '≥' : '≤'} · pas ${step} °C`;
 }
 
 function showError(msg) {
@@ -59,10 +60,6 @@ function render() {
     selected: state.selected,
     direction: settings.direction,
     onSelect: (t) => { state.selected = t; render(); },
-    onSort: (key) => {
-      state.sort = { key, dir: state.sort.key === key && state.sort.dir === 'asc' ? 'desc' : 'asc' };
-      render();
-    },
   });
 
   renderYearSelect(series, fin);
@@ -96,7 +93,7 @@ function renderCalResume(ligne, hits) {
     return;
   }
   const { measure, direction } = state.settings;
-  const crit = `${measure === 'tx' ? 'Tx' : 'Tn'} ${direction === 'ge' ? '≥' : '≤'} ${formatTemp(ligne.threshold)}`;
+  const crit = `${NOM_MESURE[measure]} ${direction === 'ge' ? '≥' : '≤'} ${formatTemp(ligne.threshold)}`;
   const n = document.createElement('span');
   n.textContent = `${hits} jour${hits > 1 ? 's' : ''} en ${state.year} (${crit}). `;
   el.append(n);
@@ -140,7 +137,7 @@ async function ouvrirVille(city, { force = false } = {}) {
 
   if (!force && !isStale(enCache)) return;
   $('rafraichir').disabled = true;
-  if (!enCache) setProgress(0);
+  if (!enCache || !enCache.tm) setProgress(0);
   try {
     const serie = await updateSeries(city, enCache, (p) => token === state.token && setProgress(p));
     if (token === state.token) { state.series = serie; render(); }
@@ -200,6 +197,28 @@ function initOnglets() {
   document.querySelectorAll('.tabbar [role="tab"]').forEach((t) => t.addEventListener('click', () => setView(t.dataset.view)));
 }
 
+// Tri : « Dernière fois » et les comptages commencent par le plus récent / le plus grand.
+const TRI_DEFAUT = { threshold: 'asc', lastIso: 'desc', count365: 'desc', avgPerYear: 'desc' };
+
+function initTri() {
+  const majSens = () => {
+    const b = $('tri-sens');
+    b.textContent = state.sort.dir === 'asc' ? '▲' : '▼';
+    b.setAttribute('aria-label', state.sort.dir === 'asc' ? 'Ordre croissant (toucher pour inverser)' : 'Ordre décroissant (toucher pour inverser)');
+  };
+  $('tri').addEventListener('change', (e) => {
+    state.sort = { key: e.target.value, dir: TRI_DEFAUT[e.target.value] };
+    majSens();
+    render();
+  });
+  $('tri-sens').addEventListener('click', () => {
+    state.sort = { ...state.sort, dir: state.sort.dir === 'asc' ? 'desc' : 'asc' };
+    majSens();
+    render();
+  });
+  majSens();
+}
+
 function initAnnee() {
   $('annee').addEventListener('change', (e) => { state.year = Number(e.target.value); render(); });
   $('annee-prec').addEventListener('click', () => { state.year--; render(); });
@@ -239,6 +258,7 @@ function main() {
   initReglages();
   initOnglets();
   initAnnee();
+  initTri();
   initSearch({ input: $('ville'), list: $('suggestions'), onPick: (c) => ouvrirVille(c) });
   initTooltip($('calendrier'), $('infobulle'), () => state.series, () => ({ ...state.settings, threshold: state.selected }));
   questions = initQuestions({

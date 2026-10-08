@@ -1,14 +1,14 @@
 // Logique des "questions rapides" (sans DOM, testable).
 import { isoToDay, dayToIso, formatLong } from './dates.js';
 import { reaches } from './thresholds.js';
-import { lastIso } from './series.js';
+import { lastIso, seriesFor } from './series.js';
 
 /**
  * period : 'all' (tout l'historique) | '365' | '30' (derniers jours) | 'cy' (année du dernier jour de données) | 'y:2025'
  * Retourne la dernière date atteinte, les jours écoulés, et le nombre de jours atteints sur la période.
  */
 export function answerQuestion(series, { measure, direction, threshold, period }, refIso = lastIso(series)) {
-  const values = measure === 'tn' ? series.tn : series.tx;
+  const values = seriesFor(series, measure);
   const startDay = isoToDay(series.start);
   const refIdx = isoToDay(refIso) - startDay;
   const top = Math.min(refIdx, values.length - 1);
@@ -59,7 +59,7 @@ const nombre = (t) => `${new Intl.NumberFormat('fr-FR', { maximumFractionDigits:
 /** Phrase de réponse en français courant. */
 export function phrase(city, { measure, direction, threshold }, answer) {
   const T = nombre(threshold);
-  const mesure = measure === 'tx' ? 'maximale' : 'minimale';
+  const mesure = { tx: 'maximale', tn: 'minimale', tm: 'moyenne' }[measure];
   const debut = `Pour ${city.name}, la température ${mesure}`;
   const ge = direction === 'ge';
   if (answer.daysAgo == null) {

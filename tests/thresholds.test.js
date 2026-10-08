@@ -86,6 +86,17 @@ export const tests = [
     mergeDaily(s, { time: ['2026-01-01'], temperature_2m_max: [99], temperature_2m_min: [99] }, (iso, old) => old == null);
     egal(s.tx[0], 5);
   }],
+  ['mesure Moy utilise la série des moyennes', () => {
+    const s = { ...serie([30, 30], [1, 1]), tm: [10, 18] };
+    const r = ligne(s, 15, { measure: 'tm' });
+    egal([r.lastIso, r.daysAgo], ['2026-01-02', 0]);
+    egal(ligne({ ...serie([30]), tm: undefined }, 15, { measure: 'tm' }).lastIso, null); // ancien cache sans moyennes
+  }],
+  ['fusion : les moyennes sont enregistrées et alignées', () => {
+    const s = emptySeries('2026-01-01');
+    mergeDaily(s, { time: ['2026-01-02'], temperature_2m_max: [5], temperature_2m_min: [1], temperature_2m_mean: [3] });
+    egal([s.tx, s.tn, s.tm], [[null, 5], [null, 1], [null, 3]]);
+  }],
   ['question : jamais atteint / aujourd’hui / il y a N jours', () => {
     const s = serie([10, 20, 5, 5, 5]);
     egal(answerQuestion(s, { measure: 'tx', direction: 'ge', threshold: 30, period: 'all' }).lastIso, null);

@@ -1,7 +1,7 @@
 // Service worker : met les fichiers de l'app en cache pour l'ouvrir hors ligne.
 // ⚠️ À CHAQUE modification de l'app, changez VERSION (v1 -> v2 -> …) :
 // c'est ce qui déclenche la mise à jour sur le téléphone.
-const VERSION = 'v2';
+const VERSION = 'v3';
 const CACHE = `meteo-seuils-${VERSION}`;
 const FICHIERS = [
   './', './index.html', './manifest.webmanifest', './css/styles.css',

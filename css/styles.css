@@ -168,27 +168,29 @@ body[data-view="questions"] .entete .memo { display: none; }
 .stat strong { display: block; font-size: 1.25rem; line-height: 1.25; margin: 2px 0; overflow-wrap: anywhere; }
 .resultat .note { margin: 10px 0 0; font-size: .8rem; color: var(--muted); }
 
-/* Tableau : défile dans son conteneur, jamais la page */
-.table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; max-width: 100%; }
-table { border-collapse: separate; border-spacing: 0; width: 100%; font-variant-numeric: tabular-nums; }
-th, td { padding: 6px 12px; text-align: left; white-space: nowrap; border-bottom: 1px solid var(--border); }
-td { height: 44px; }
-th { background: var(--surface); position: sticky; top: 0; z-index: 2; padding: 0; vertical-align: bottom; }
-th button {
-  width: 100%; min-height: 44px; padding: 4px 12px; border: 0; background: none; color: var(--muted); font: inherit;
-  font-size: .8rem; font-weight: 600; text-align: left; cursor: pointer; white-space: normal; min-width: 7.5rem;
+/* Liste des seuils : pas de défilement latéral, on scrolle seulement vers le bas */
+.tri { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.tri label { color: var(--muted); font-size: .9rem; flex: none; }
+.tri select {
+  flex: 1; min-width: 0; min-height: 44px; padding: 0 12px; font-size: 16px; border-radius: 10px;
+  border: 1px solid var(--border); background: var(--surface); color: var(--text);
 }
-th button[data-dir]::after { content: " " attr(data-dir); color: var(--accent); }
-td.seuil, th:first-child { position: sticky; left: 0; z-index: 1; background: var(--surface); font-weight: 700; }
-th:first-child { z-index: 3; }
-tbody tr { cursor: pointer; }
-/* La mise en évidence des seuils récents est une pastille dans la colonne « Il y a » */
-.pill { display: inline-block; padding: 2px 10px; border-radius: 12px; background: var(--bg); }
+.liste { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+.seuil-ligne {
+  display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: 12px; row-gap: 0; align-items: center;
+  min-height: 44px; padding: 8px 14px; border-bottom: 1px solid var(--border); cursor: pointer; border-left: 4px solid transparent;
+}
+.seuil-ligne:last-child { border-bottom: 0; }
+.seuil-val { font-weight: 700; font-size: 1.05rem; font-variant-numeric: tabular-nums; }
+.pill { justify-self: end; padding: 2px 10px; border-radius: 12px; background: var(--bg); font-size: .9rem; white-space: nowrap; }
 .pill.p1 { background: var(--recent1); font-weight: 600; }
 .pill.p2 { background: var(--recent2); }
-tbody tr.jamais td { color: var(--muted); opacity: .6; font-weight: 400; }
-tbody tr.choisi td { background-image: linear-gradient(var(--choisi), var(--choisi)); box-shadow: inset 0 -2px 0 var(--accent), inset 0 2px 0 var(--accent); }
-tbody tr:last-child td { border-bottom: 0; }
+.seuil-date { grid-column: 1 / -1; }
+.seuil-stats { grid-column: 1 / -1; font-size: .82rem; color: var(--muted); }
+.seuil-ligne.jamais { color: var(--muted); }
+.seuil-ligne.jamais .seuil-val { font-weight: 600; }
+.seuil-ligne.jamais .seuil-date { grid-column: auto; justify-self: end; font-size: .9rem; }
+.seuil-ligne.choisi { background: var(--choisi); border-left-color: var(--accent); }
 
 /* Calendrier */
 .annee { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; }
@@ -240,5 +242,5 @@ tbody tr:last-child td { border-bottom: 0; }
   .reglages-grille { grid-template-columns: 1fr; }
   .deux { grid-template-columns: 1fr 1fr; }
   .calendrier { grid-template-columns: repeat(3, 1fr); }
-  .table-wrap { max-height: calc(100vh - 230px); overflow-y: auto; }
+  .liste { max-height: calc(100vh - 260px); overflow-y: auto; }
 }

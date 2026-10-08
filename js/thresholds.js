@@ -1,5 +1,6 @@
 // Logique pure (aucun accès au DOM ni au réseau) : facile à tester.
 import { dayToIso, isoToDay } from './dates.js';
+import { seriesFor } from './series.js';
 
 /** Liste des seuils, de `min` à `max` par pas de `step`. */
 export function thresholdList(step, min = -10, max = 42) {
@@ -21,7 +22,7 @@ export function reaches(value, threshold, direction) {
  */
 export function computeThresholds(series, opts = {}) {
   const { measure = 'tx', direction = 'ge', step = 1, min = -10, max = 42, refIso } = opts;
-  const values = measure === 'tn' ? series.tn : series.tx;
+  const values = seriesFor(series, measure);
   const n = values.length;
   const startDay = isoToDay(series.start);
   const refIndex = refIso ? isoToDay(refIso) - startDay : n - 1;

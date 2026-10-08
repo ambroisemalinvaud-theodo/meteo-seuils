@@ -1,4 +1,4 @@
-// Tableau des seuils : tri, mise en évidence, sélection d'une ligne.
+// Liste des seuils : une ligne par seuil, lisible sans défilement latéral.
 import { formatLong } from './dates.js';
 
 const nombre = new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 0 });
@@ -14,20 +14,12 @@ export function ilYa(jours) {
   return txt;
 }
 
-const COLONNES = [
-  { key: 'threshold', label: 'Seuil' },
-  { key: 'lastIso', label: 'Dernière fois atteint' },
-  { key: 'daysAgo', label: 'Il y a' },
-  { key: 'count365', label: 'Jours sur les 365 derniers' },
-  { key: 'avgPerYear', label: 'Moyenne de jours par an' },
-];
-
 /** Tri : les valeurs absentes (seuil jamais atteint) restent toujours en bas. */
 export function sortRows(rows, { key, dir }) {
   const sens = dir === 'asc' ? 1 : -1;
   return [...rows].sort((a, b) => {
-    let va = a[key];
-    let vb = b[key];
+    const va = a[key];
+    const vb = b[key];
     if (va == null && vb == null) return a.threshold - b.threshold;
     if (va == null) return 1;
     if (vb == null) return -1;
@@ -37,53 +29,42 @@ export function sortRows(rows, { key, dir }) {
   });
 }
 
-export function renderTable(wrap, rows, { sort, selected, direction, onSelect, onSort }) {
+function el(tag, classe, texte) {
+  const e = document.createElement(tag);
+  if (classe) e.className = classe;
+  if (texte != null) e.textContent = texte;
+  return e;
+}
+
+export function renderTable(wrap, rows, { sort, selected, direction, onSelect }) {
   const signe = direction === 'le' ? '≤' : '≥';
-  const table = document.createElement('table');
+  const frag = document.createDocumentFragment();
 
-  const thead = table.createTHead().insertRow();
-  for (const col of COLONNES) {
-    const th = document.createElement('th');
-    th.scope = 'col';
-    const actif = sort.key === col.key;
-    th.setAttribute('aria-sort', actif ? (sort.dir === 'asc' ? 'ascending' : 'descending') : 'none');
-    const b = document.createElement('button');
-    b.type = 'button';
-    b.textContent = col.label;
-    if (actif) b.dataset.dir = sort.dir === 'asc' ? '▲' : '▼';
-    b.addEventListener('click', () => onSort(col.key));
-    th.append(b);
-    thead.append(th);
-  }
-
-  const tbody = table.createTBody();
   for (const r of sortRows(rows, sort)) {
-    const tr = tbody.insertRow();
-    tr.tabIndex = 0;
-    tr.dataset.seuil = r.threshold;
-    if (r.lastIso == null) tr.classList.add('jamais');
-    if (r.threshold === selected) { tr.classList.add('choisi'); tr.setAttribute('aria-selected', 'true'); }
+    const ligne = el('div', 'seuil-ligne');
+    ligne.setAttribute('role', 'listitem');
+    ligne.tabIndex = 0;
+    ligne.dataset.seuil = r.threshold;
+    if (r.lastIso == null) ligne.classList.add('jamais');
+    if (r.threshold === selected) { ligne.classList.add('choisi'); ligne.setAttribute('aria-current', 'true'); }
 
-    tr.insertCell().textContent = `${signe} ${formatTemp(r.threshold)}`;
-    tr.insertCell().textContent = r.lastIso ? formatLong(r.lastIso) : 'Jamais atteint';
-    const cIlYa = tr.insertCell();
+    ligne.append(el('span', 'seuil-val', `${signe} ${formatTemp(r.threshold)}`));
     if (r.lastIso) {
-      const pill = document.createElement('span');
-      pill.className = `pill${r.daysAgo <= 7 ? ' p1' : r.daysAgo <= 30 ? ' p2' : ''}`;
-      pill.textContent = ilYa(r.daysAgo);
-      cIlYa.append(pill);
-    } else cIlYa.textContent = '—';
-    tr.insertCell().textContent = nombre.format(r.count365);
-    tr.insertCell().textContent = r.avgPerYear == null ? '—' : decimal.format(r.avgPerYear);
-    tr.cells[0].className = 'seuil';
+      const pill = el('span', `pill${r.daysAgo <= 7 ? ' p1' : r.daysAgo <= 30 ? ' p2' : ''}`, ilYa(r.daysAgo));
+      ligne.append(pill, el('span', 'seuil-date', formatLong(r.lastIso)));
+      const n = r.count365;
+      const moy = r.avgPerYear == null ? '—' : decimal.format(r.avgPerYear);
+      ligne.append(el('span', 'seuil-stats', `${nombre.format(n)} j sur les 365 derniers · moy. ${moy} j/an`));
+    } else {
+      ligne.append(el('span', 'seuil-date', 'Jamais atteint'));
+    }
 
     const choisir = () => onSelect(r.threshold === selected ? null : r.threshold);
-    tr.addEventListener('click', choisir);
-    tr.addEventListener('keydown', (e) => {
+    ligne.addEventListener('click', choisir);
+    ligne.addEventListener('keydown', (e) => {
       if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); choisir(); }
     });
+    frag.append(ligne);
   }
-  const scroll = wrap.scrollLeft;
-  wrap.replaceChildren(table);
-  wrap.scrollLeft = scroll;
+  wrap.replaceChildren(frag);
 }

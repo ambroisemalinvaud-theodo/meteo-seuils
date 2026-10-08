@@ -70,8 +70,18 @@
     <div class="panneaux">
       <section id="panneau-tableau" class="panneau" role="tabpanel" aria-labelledby="tab-tableau">
         <h2>Seuils</h2>
-        <p class="aide">Touchez une ligne pour repérer ces jours dans le calendrier.</p>
-        <div class="table-wrap" id="table-wrap" tabindex="0" aria-label="Tableau des seuils (défile horizontalement)"></div>
+        <p class="aide">Touchez un seuil pour repérer ces jours dans le calendrier.</p>
+        <div class="tri">
+          <label for="tri">Trier par</label>
+          <select id="tri">
+            <option value="threshold">Seuil</option>
+            <option value="lastIso">Dernière fois atteint</option>
+            <option value="count365">Jours sur les 365 derniers</option>
+            <option value="avgPerYear">Moyenne de jours par an</option>
+          </select>
+          <button type="button" id="tri-sens" class="btn icone" aria-label="Inverser l'ordre du tri">▲</button>
+        </div>
+        <div class="liste" id="table-wrap" role="list" aria-label="Seuils"></div>
       </section>
 
       <section id="panneau-calendrier" class="panneau" role="tabpanel" aria-labelledby="tab-calendrier">
@@ -94,7 +104,7 @@
 
     <section id="panneau-questions" class="panneau" role="tabpanel" aria-labelledby="tab-questions">
       <h2>Questions rapides</h2>
-      <p class="aide">Complétez la phrase : la réponse s'affiche tout de suite. Indépendant de la ville choisie plus haut.</p>
+      <p class="aide">Complétez la phrase : la réponse s'affiche tout de suite. <strong>Max</strong> = température la plus haute de la journée, <strong>Min</strong> = la plus basse, <strong>Moy</strong> = moyenne sur 24 h.</p>
       <div id="q-favs" class="favs"></div>
 
       <form id="q-form" class="carte form-q" autocomplete="off">
@@ -108,10 +118,11 @@
         </div>
         <div class="deux">
           <fieldset class="seg">
-            <legend>Mesure</legend>
-            <label><input type="radio" name="qmeasure" value="tx"><span>Maximale (Tx)</span></label>
-            <label><input type="radio" name="qmeasure" value="tn"><span>Minimale (Tn)</span></label>
-          </fieldset>
+          <legend>Mesure</legend>
+          <label><input type="radio" name="qmeasure" value="tx"><span>Max</span></label>
+          <label><input type="radio" name="qmeasure" value="tn"><span>Min</span></label>
+          <label><input type="radio" name="qmeasure" value="tm"><span>Moy</span></label>
+        </fieldset>
           <fieldset class="seg">
             <legend>Sens</legend>
             <label><input type="radio" name="qdirection" value="ge"><span>Atteint ou dépasse (≥)</span></label>
@@ -153,12 +164,13 @@
   <dialog id="dlg-reglages" class="feuille" aria-labelledby="dlg-titre">
     <form method="dialog">
       <h2 id="dlg-titre">Réglages</h2>
-      <p class="aide">Valables pour le tableau et le calendrier.</p>
+      <p class="aide">Valables pour la liste des seuils et le calendrier. <strong>Max</strong> = température la plus haute de la journée, <strong>Min</strong> = la plus basse, <strong>Moy</strong> = moyenne sur 24 h.</p>
       <div class="reglages-grille">
         <fieldset class="seg">
           <legend>Mesure</legend>
-          <label><input type="radio" name="measure" value="tx"><span>Maximale (Tx)</span></label>
-          <label><input type="radio" name="measure" value="tn"><span>Minimale (Tn)</span></label>
+          <label><input type="radio" name="measure" value="tx"><span>Max</span></label>
+          <label><input type="radio" name="measure" value="tn"><span>Min</span></label>
+          <label><input type="radio" name="measure" value="tm"><span>Moy</span></label>
         </fieldset>
         <fieldset class="seg">
           <legend>Sens</legend>

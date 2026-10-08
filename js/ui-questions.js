@@ -91,7 +91,7 @@ export function initQuestions({ defaultCity, readCached, isStale, updateSeries, 
 
   function libelle(q) {
     const per = { cy: 'année en cours', 365: '12 mois', 30: '30 jours', all: `depuis ${PREMIERE_ANNEE}` }[q.period] ?? q.period.slice(2);
-    return `${q.city.name} · ${q.measure === 'tx' ? 'Tx' : 'Tn'} ${SIGNE[q.direction]} ${formatTemp(parseSeuil(q.threshold))} · ${per}`;
+    return `${q.city.name} · ${{ tx: 'Max', tn: 'Min', tm: 'Moy' }[q.measure]} ${SIGNE[q.direction]} ${formatTemp(parseSeuil(q.threshold))} · ${per}`;
   }
 
   function rendreFavoris() {
@@ -178,7 +178,7 @@ export function initQuestions({ defaultCity, readCached, isStale, updateSeries, 
     else msg(`Téléchargement de l'historique de ${form.city.name}…`);
     if (!isStale(rec)) return;
 
-    if (!rec) setProg(0);
+    if (!rec || !rec.tm) setProg(0);
     try {
       rec = await updateSeries(form.city, rec, (p) => mien === jeton && setProg(p));
       onStored?.();

@@ -1,6 +1,7 @@
 // Calendrier annuel : une case par jour, colorée selon la mesure choisie.
 import { daysInMonth, formatLong, isoToDay, nomMois, pad2, weekdayMonday0 } from './dates.js';
 import { reaches } from './thresholds.js';
+import { seriesFor } from './series.js';
 import { formatTemp } from './ui-table.js';
 
 // Échelle de couleurs (°C -> RGB), identique pour Tx et Tn : bleu froid -> rouge chaud.
@@ -34,7 +35,7 @@ const val = (arr, i) => (arr[i] == null || Number.isNaN(arr[i]) ? null : arr[i])
 /** Dessine l'année. Retourne le nombre de jours atteignant le seuil (si un seuil est choisi). */
 export function renderHeatmap(root, { series, year, measure, direction, threshold, lastIso }) {
   const startDay = isoToDay(series.start);
-  const serie = measure === 'tn' ? series.tn : series.tx;
+  const serie = seriesFor(series, measure);
   let nbHits = 0;
   const frag = document.createDocumentFragment();
 
@@ -86,9 +87,10 @@ export function initTooltip(root, tip, getSeries, getContext) {
     const i = isoToDay(iso) - isoToDay(series.start);
     const tx = val(series.tx, i);
     const tn = val(series.tn, i);
+    const tm = val(series.tm || [], i);
     const f = (v) => (v == null ? '—' : formatTemp(v));
     const { threshold, measure, direction } = getContext();
-    let txt = `${formatLong(iso)}\nTx ${f(tx)} · Tn ${f(tn)}`;
+    let txt = `${formatLong(iso)}\nMax ${f(tx)} · Min ${f(tn)} · Moy ${f(tm)}`;
     if (threshold != null && cell.classList.contains('hit')) txt += `\nSeuil ${direction === 'le' ? '≤' : '≥'} ${formatTemp(threshold)} atteint`;
     tip.textContent = txt;
     tip.hidden = false;
