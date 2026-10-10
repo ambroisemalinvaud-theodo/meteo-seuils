@@ -25,6 +25,19 @@ export function formatLong(iso) {
   return fmtLong.format(new Date(isoToDay(iso) * MS_PAR_JOUR));
 }
 
+const fmtMoisCourt = new Intl.DateTimeFormat('fr-FR', { month: 'short', timeZone: 'UTC' });
+
+/** Nom abrégé du mois (0 = janvier) : « janv. » */
+export function nomMoisCourt(m) {
+  return fmtMoisCourt.format(new Date(Date.UTC(2001, m, 1)));
+}
+
+/** Date courte : « 15 sept. 2026 » */
+export function formatCourt(iso) {
+  return new Intl.DateTimeFormat('fr-FR', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' })
+    .format(new Date(isoToDay(iso) * MS_PAR_JOUR));
+}
+
 /** Nom du mois (0 = janvier) */
 export function nomMois(m) {
   return fmtMois.format(new Date(Date.UTC(2001, m, 1)));

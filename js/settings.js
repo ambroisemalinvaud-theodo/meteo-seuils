@@ -21,6 +21,8 @@ export function loadSettings() {
   return s;
 }
 export const saveSettings = (s) => ecrire('reglages', s);
+export const loadSeuil = () => { const v = lire('seuil', null); return typeof v === 'number' ? v : null; };
+export const saveSeuil = (t) => ecrire('seuil', t);
 export const loadLastCity = () => lire('ville', null);
 export const saveLastCity = (c) => ecrire('ville', c);
 

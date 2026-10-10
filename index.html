@@ -5,8 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Seuils météo</title>
   <meta name="description" content="Dernière fois qu'une température seuil a été atteinte dans une ville.">
-  <meta name="theme-color" content="#1d6fb8" media="(prefers-color-scheme: light)">
-  <meta name="theme-color" content="#12385c" media="(prefers-color-scheme: dark)">
+  <meta name="theme-color" content="#0b6b5a" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#0c2b25" media="(prefers-color-scheme: dark)">
   <meta name="color-scheme" content="light dark">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="mobile-web-app-capable" content="yes">
@@ -54,104 +54,108 @@
 
   <main class="app">
     <div id="erreur" class="erreur" role="alert" hidden></div>
-
-    <section class="statut" aria-live="polite">
-      <p id="statut" class="statut-texte">Choisissez une ville pour commencer.</p>
-      <div class="barre">
-        <button type="button" id="reglages-btn" class="chip" aria-haspopup="dialog">Réglages</button>
-        <button type="button" id="rafraichir" class="btn" disabled>Rafraîchir</button>
-      </div>
-      <div id="progression" class="progression" hidden>
-        <progress id="barre" max="100" value="0"></progress>
-        <span id="progression-texte">Téléchargement de l'historique…</span>
-      </div>
-    </section>
+    <div id="progression" class="progression" role="status" hidden>
+      <progress id="barre" max="100" value="0"></progress>
+      <span id="progression-texte">Téléchargement de l'historique…</span>
+    </div>
 
     <div class="panneaux">
       <section id="panneau-tableau" class="panneau" role="tabpanel" aria-labelledby="tab-tableau">
-        <h2>Seuils</h2>
-        <p class="aide">Touchez un seuil pour repérer ces jours dans le calendrier.</p>
+        <div class="lt">
+          <h2 id="titre-ville">Seuils météo</h2>
+          <div class="lt-actions">
+            <button type="button" id="reglages-btn" class="pill" aria-haspopup="dialog">Réglages</button>
+            <button type="button" id="rafraichir" class="pill rond" aria-label="Rafraîchir les données" disabled>↻</button>
+          </div>
+        </div>
+        <p id="statut" class="sub" aria-live="polite">Choisissez une ville pour commencer.</p>
+        <div id="hero" class="hero-zone" aria-live="polite"></div>
         <div class="tri">
           <label for="tri">Trier par</label>
           <select id="tri">
             <option value="threshold">Seuil</option>
             <option value="lastIso">Dernière fois atteint</option>
-            <option value="count365">Jours sur les 365 derniers</option>
-            <option value="avgPerYear">Moyenne de jours par an</option>
           </select>
-          <button type="button" id="tri-sens" class="btn icone" aria-label="Inverser l'ordre du tri">▲</button>
+          <button type="button" id="tri-sens" class="pill rond" aria-label="Inverser l'ordre du tri">▲</button>
         </div>
-        <div class="liste" id="table-wrap" role="list" aria-label="Seuils"></div>
+        <div class="liste" id="table-wrap" role="group" aria-label="Seuils (touchez un seuil pour le sélectionner)"></div>
       </section>
 
       <section id="panneau-calendrier" class="panneau" role="tabpanel" aria-labelledby="tab-calendrier">
-        <h2>Calendrier</h2>
-        <div class="carte">
+        <div class="cal-top">
+          <div class="brand"><span>Calendrier</span><span id="cal-ville"></span></div>
           <div class="annee">
-            <button type="button" id="annee-prec" class="btn icone" aria-label="Année précédente">‹</button>
+            <button type="button" id="annee-prec" class="pill rond" aria-label="Année précédente">‹</button>
             <label class="sr" for="annee">Année</label>
             <select id="annee"></select>
-            <button type="button" id="annee-suiv" class="btn icone" aria-label="Année suivante">›</button>
+            <button type="button" id="annee-suiv" class="pill rond" aria-label="Année suivante">›</button>
           </div>
-          <p id="cal-resume" class="aide"></p>
-          <div id="calendrier" class="calendrier"></div>
-          <div class="legende" aria-hidden="true">
-            <span>−10 °C</span><div id="legende-barre" class="legende-barre"></div><span>40 °C</span>
-          </div>
+          <div id="cal-meta" class="meta"></div>
+        </div>
+        <div class="h2">Une case = un jour</div>
+        <p id="cal-resume" class="sum"></p>
+        <div id="calendrier" class="calendrier"></div>
+        <div class="legende" aria-hidden="true">
+          <span>−10 °C</span><div id="legende-barre" class="legende-barre"></div><span>40 °C</span>
         </div>
       </section>
     </div>
 
     <section id="panneau-questions" class="panneau" role="tabpanel" aria-labelledby="tab-questions">
-      <h2>Questions rapides</h2>
-      <p class="aide">Complétez la phrase : la réponse s'affiche tout de suite. <strong>Max</strong> = température la plus haute de la journée, <strong>Min</strong> = la plus basse, <strong>Moy</strong> = moyenne sur 24 h.</p>
-      <div id="q-favs" class="favs"></div>
+      <div class="lt">
+        <h2>Questions</h2>
+        <span class="pill statique" id="q-nbfav" hidden></span>
+      </div>
+      <div id="q-prog" class="progression" role="status" hidden>
+        <progress id="q-barre" max="100" value="0"></progress>
+        <span id="q-prog-texte">Téléchargement de l'historique…</span>
+      </div>
+      <div id="q-erreur" class="erreur" role="alert" hidden></div>
+      <div id="q-resultat" aria-live="polite"></div>
 
-      <form id="q-form" class="carte form-q" autocomplete="off">
-        <div class="champ">
-          <label for="q-ville">Ville</label>
+      <div class="sec">Question</div>
+      <form id="q-form" class="grp form-q" autocomplete="off">
+        <div class="frow">
+          <label class="fl" for="q-ville">Ville</label>
           <div class="recherche">
             <input id="q-ville" type="search" placeholder="Rechercher une ville…" autocomplete="off" autocapitalize="off"
                    spellcheck="false" role="combobox" aria-expanded="false" aria-controls="q-suggestions" aria-autocomplete="list">
             <ul id="q-suggestions" class="suggestions" role="listbox" hidden></ul>
           </div>
         </div>
-        <div class="deux">
-          <fieldset class="seg">
-          <legend>Mesure</legend>
-          <label><input type="radio" name="qmeasure" value="tx"><span>Max</span></label>
-          <label><input type="radio" name="qmeasure" value="tn"><span>Min</span></label>
-          <label><input type="radio" name="qmeasure" value="tm"><span>Moy</span></label>
-        </fieldset>
-          <fieldset class="seg">
-            <legend>Sens</legend>
-            <label><input type="radio" name="qdirection" value="ge"><span>Atteint ou dépasse (≥)</span></label>
-            <label><input type="radio" name="qdirection" value="le"><span>Descend à ou sous (≤)</span></label>
-          </fieldset>
-        </div>
-        <div class="deux">
-          <div class="champ">
-            <label for="q-seuil">Seuil (°C)</label>
-            <div class="stepper">
-              <button type="button" id="q-moins" class="btn icone" aria-label="Diminuer d'un degré">−</button>
-              <input id="q-seuil" type="text" inputmode="decimal" autocomplete="off" enterkeyhint="done">
-              <button type="button" id="q-plus" class="btn icone" aria-label="Augmenter d'un degré">+</button>
-            </div>
-          </div>
-          <div class="champ">
-            <label for="q-periode">Période du comptage</label>
-            <select id="q-periode"></select>
+        <div class="frow">
+          <span class="fl" id="l-qmeasure">Mesure</span>
+          <div class="seg" role="radiogroup" aria-labelledby="l-qmeasure">
+            <label><input type="radio" name="qmeasure" value="tx"><span>Max</span></label>
+            <label><input type="radio" name="qmeasure" value="tn"><span>Min</span></label>
+            <label><input type="radio" name="qmeasure" value="tm"><span>Moy</span></label>
           </div>
         </div>
-        <button type="button" id="q-etoile" class="btn" aria-pressed="false">☆ Enregistrer cette question</button>
+        <div class="frow">
+          <span class="fl" id="l-qdirection">Sens</span>
+          <div class="seg" role="radiogroup" aria-labelledby="l-qdirection">
+            <label><input type="radio" name="qdirection" value="ge" aria-label="Atteint ou dépasse"><span>≥ ou plus</span></label>
+            <label><input type="radio" name="qdirection" value="le" aria-label="Descend à ou sous"><span>≤ ou moins</span></label>
+          </div>
+        </div>
+        <div class="frow">
+          <label class="fl" for="q-seuil">Seuil (°C)</label>
+          <div class="stepper">
+            <button type="button" id="q-moins" class="pill rond" aria-label="Diminuer d'un degré">−</button>
+            <input id="q-seuil" type="text" inputmode="decimal" autocomplete="off" enterkeyhint="done">
+            <button type="button" id="q-plus" class="pill rond" aria-label="Augmenter d'un degré">+</button>
+          </div>
+        </div>
+        <div class="frow">
+          <label class="fl" for="q-periode">Période</label>
+          <select id="q-periode"></select>
+        </div>
+        <button type="button" id="q-etoile" class="frow-btn" aria-pressed="false">☆ Enregistrer cette question</button>
       </form>
+      <p class="aide">Max = température la plus haute de la journée, Min = la plus basse, Moy = moyenne sur 24 h.</p>
 
-      <div id="q-prog" class="progression" hidden>
-        <progress id="q-barre" max="100" value="0"></progress>
-        <span id="q-prog-texte">Téléchargement de l'historique…</span>
-      </div>
-      <div id="q-erreur" class="erreur" role="alert" hidden></div>
-      <div id="q-resultat" aria-live="polite"></div>
+      <div class="sec">Favoris</div>
+      <div id="q-favs"></div>
     </section>
   </main>
 

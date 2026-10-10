@@ -5,11 +5,13 @@ import { answerQuestion, periodLabel, phrase } from './questions.js';
 import { lastIso } from './series.js';
 import { loadFavoris, loadFormQ, saveFavoris, saveFormQ } from './settings.js';
 import { cityLabel, initSearch } from './ui-search.js';
-import { formatTemp, ilYa } from './ui-table.js';
+import { formatNombre, formatTemp } from './ui-table.js';
+import { buildHero } from './ui-hero.js';
 
 const $ = (id) => document.getElementById(id);
 const PREMIERE_ANNEE = Number(DEBUT_HISTORIQUE.slice(0, 4));
 const SIGNE = { ge: '≥', le: '≤' };
+const NOM = { tx: 'Max', tn: 'Min', tm: 'Moy' };
 
 function el(tag, classe, texte) {
   const e = document.createElement(tag);
@@ -87,11 +89,14 @@ export function initQuestions({ defaultCity, readCached, isStale, updateSeries, 
     b.textContent = on ? '★ Question enregistrée' : '☆ Enregistrer cette question';
     b.setAttribute('aria-pressed', String(on));
     b.disabled = !form.city || !Number.isFinite(parseSeuil(form.threshold));
+    const pill = $('q-nbfav');
+    pill.hidden = !favoris.length;
+    pill.textContent = `★ ${favoris.length} favorite${favoris.length > 1 ? 's' : ''}`;
   }
 
   function libelle(q) {
     const per = { cy: 'année en cours', 365: '12 mois', 30: '30 jours', all: `depuis ${PREMIERE_ANNEE}` }[q.period] ?? q.period.slice(2);
-    return `${q.city.name} · ${{ tx: 'Max', tn: 'Min', tm: 'Moy' }[q.measure]} ${SIGNE[q.direction]} ${formatTemp(parseSeuil(q.threshold))} · ${per}`;
+    return `${q.city.name} · ${NOM[q.measure]} ${SIGNE[q.direction]} ${formatTemp(parseSeuil(q.threshold))} · ${per}`;
   }
 
   function rendreFavoris() {
@@ -101,8 +106,9 @@ export function initQuestions({ defaultCity, readCached, isStale, updateSeries, 
       box.append(el('p', 'aide', 'Enregistrez une question avec ☆ pour la retrouver en un geste.'));
       return;
     }
+    const grp = el('div', 'grp');
     favoris.forEach((f, i) => {
-      const w = el('span', 'fav');
+      const w = el('div', 'fav');
       const b = el('button', 'chip', libelle(f));
       b.type = 'button';
       b.addEventListener('click', () => {
@@ -110,6 +116,7 @@ export function initQuestions({ defaultCity, readCached, isStale, updateSeries, 
         saveFormQ(form);
         versChamps();
         poser();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
       });
       const x = el('button', 'chip-x', '✕');
       x.type = 'button';
@@ -121,8 +128,9 @@ export function initQuestions({ defaultCity, readCached, isStale, updateSeries, 
         majEtoile();
       });
       w.append(b, x);
-      box.append(w);
+      grp.append(w);
     });
+    box.append(grp);
   }
 
   $('q-etoile').addEventListener('click', () => {
@@ -147,22 +155,22 @@ export function initQuestions({ defaultCity, readCached, isStale, updateSeries, 
     const fin = lastIso(rec);
     const r = answerQuestion(rec, q, fin);
     const startYear = Number(rec.start.slice(0, 4));
-    const carte = el('div', 'carte resultat');
-    carte.append(el('p', 'phrase', phrase(form.city, q, r)));
-
-    const stats = el('div', 'stats');
-    const tuile = (titre, grand, petit) => {
-      const t = el('div', 'stat');
-      t.append(el('span', 'stat-t', titre), el('strong', null, grand), el('span', 'stat-p', petit || ' '));
-      stats.append(t);
-    };
-    tuile('Depuis la dernière fois', r.lastIso ? ilYa(r.daysAgo) : 'Jamais', r.lastIso ? '' : `depuis ${startYear}`);
-    tuile('Dernière fois', r.lastIso ? formatLong(r.lastIso) : '—');
-    const nb = new Intl.NumberFormat('fr-FR');
-    tuile(`Jours ${periodLabel(q.period, r, startYear)}`, nb.format(r.count), `sur ${nb.format(r.validDays)} jours de données`);
-    carte.append(stats);
-    carte.append(el('p', 'note', `${note ? `${note} ` : ''}Données jusqu'au ${formatLong(fin)}.`));
-    $('q-resultat').replaceChildren(carte);
+    const hero = buildHero({
+      titre: `Pour ${form.city.name} · ${NOM[q.measure]} ${SIGNE[q.direction]} ${formatTemp(q.threshold)}`,
+      threshold: q.threshold,
+      direction: q.direction,
+      daysAgo: r.daysAgo,
+      lastIso: r.lastIso,
+      depuis: true,
+      classe: 'qhero',
+      stats: [
+        { valeur: formatNombre(r.count), libelle: `jours ${periodLabel(q.period, r, startYear)}` },
+        { valeur: formatNombre(r.validDays), libelle: 'jours de données' },
+      ],
+    });
+    const zone = el('div');
+    zone.append(hero, el('p', 'phrase', phrase(form.city, q, r)), el('p', 'note', `${note ? `${note} ` : ''}Données jusqu'au ${formatLong(fin)}.`));
+    $('q-resultat').replaceChildren(zone);
   }
 
   async function poser() {
@@ -194,5 +202,14 @@ export function initQuestions({ defaultCity, readCached, isStale, updateSeries, 
 
   versChamps();
   rendreFavoris();
-  return { poser };
+  return {
+    poser,
+    /** Propose la ville de l'écran principal tant qu'aucune ville n'a été choisie ici. */
+    setDefaultCity(c) {
+      if (form.city || !c) return;
+      form.city = villeMinimale(c);
+      saveFormQ(form);
+      versChamps();
+    },
+  };
 }

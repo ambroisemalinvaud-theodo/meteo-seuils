@@ -1,10 +1,13 @@
-// Liste des seuils : une ligne par seuil, lisible sans défilement latéral.
+// Liste des seuils : une bande de couleur par seuil (couleur = température), sans défilement latéral.
 import { formatLong } from './dates.js';
+import { rgbCss, tempRgb, textOn } from './colors.js';
 
 const nombre = new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 0 });
 const decimal = new Intl.NumberFormat('fr-FR', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
 
 export const formatTemp = (t) => `${new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 1 }).format(t).replace('-', '−')} °C`;
+export const formatDecimal = (n) => decimal.format(n);
+export const formatNombre = (n) => nombre.format(n);
 
 export function ilYa(jours) {
   if (jours === 0) return "Aujourd'hui";
@@ -13,6 +16,8 @@ export function ilYa(jours) {
   if (jours >= 365) txt += ` (≈ ${decimal.format(jours / 365.25)} ans)`;
   return txt;
 }
+
+const ilYaCourt = (j) => (j === 0 ? 'auj.' : j === 1 ? 'hier' : `${nombre.format(j)} j`);
 
 /** Tri : les valeurs absentes (seuil jamais atteint) restent toujours en bas. */
 export function sortRows(rows, { key, dir }) {
@@ -41,30 +46,24 @@ export function renderTable(wrap, rows, { sort, selected, direction, onSelect })
   const frag = document.createDocumentFragment();
 
   for (const r of sortRows(rows, sort)) {
-    const ligne = el('div', 'seuil-ligne');
-    ligne.setAttribute('role', 'listitem');
-    ligne.tabIndex = 0;
-    ligne.dataset.seuil = r.threshold;
-    if (r.lastIso == null) ligne.classList.add('jamais');
-    if (r.threshold === selected) { ligne.classList.add('choisi'); ligne.setAttribute('aria-current', 'true'); }
+    const bande = el('button', 'blk');
+    bande.type = 'button';
+    bande.dataset.seuil = r.threshold;
+    bande.setAttribute('aria-pressed', String(r.threshold === selected));
+    if (r.threshold === selected) bande.classList.add('sel');
 
-    ligne.append(el('span', 'seuil-val', `${signe} ${formatTemp(r.threshold)}`));
+    bande.append(el('span', 't num', `${signe} ${formatTemp(r.threshold)}`));
     if (r.lastIso) {
-      const pill = el('span', `pill${r.daysAgo <= 7 ? ' p1' : r.daysAgo <= 30 ? ' p2' : ''}`, ilYa(r.daysAgo));
-      ligne.append(pill, el('span', 'seuil-date', formatLong(r.lastIso)));
-      const n = r.count365;
-      const moy = r.avgPerYear == null ? '—' : decimal.format(r.avgPerYear);
-      ligne.append(el('span', 'seuil-stats', `${nombre.format(n)} j sur les 365 derniers · moy. ${moy} j/an`));
+      const c = tempRgb(r.threshold);
+      bande.style.background = rgbCss(c);
+      bande.style.color = textOn(c);
+      bande.append(el('span', 'd', formatLong(r.lastIso)), el('span', 'a num', ilYaCourt(r.daysAgo)));
     } else {
-      ligne.append(el('span', 'seuil-date', 'Jamais atteint'));
+      bande.classList.add('never');
+      bande.append(el('span', 'd', 'Jamais atteint'), el('span', 'a'));
     }
-
-    const choisir = () => onSelect(r.threshold === selected ? null : r.threshold);
-    ligne.addEventListener('click', choisir);
-    ligne.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); choisir(); }
-    });
-    frag.append(ligne);
+    bande.addEventListener('click', () => onSelect(r.threshold));
+    frag.append(bande);
   }
   wrap.replaceChildren(frag);
 }

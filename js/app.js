@@ -1,16 +1,17 @@
 // Point d'entrée : relie les modules, garde l'état de l'application.
 import { computeThresholds } from './thresholds.js';
-import { formatLong, todayUtcIso } from './dates.js';
+import { formatCourt, formatLong, todayUtcIso } from './dates.js';
 import { lastIso } from './series.js';
 import { ApiError } from './api.js';
 import { listCities } from './db.js';
 import { isStale, readCached, updateSeries } from './store.js';
 import { initQuestions } from './ui-questions.js';
-import { loadLastCity, loadSettings, saveLastCity, saveSettings } from './settings.js';
+import { loadLastCity, loadSeuil, loadSettings, saveLastCity, saveSeuil, saveSettings } from './settings.js';
 import { cityLabel, initSearch } from './ui-search.js';
-import { renderTable } from './ui-table.js';
-import { initTooltip, legendGradient, renderHeatmap } from './ui-heatmap.js';
-import { formatTemp } from './ui-table.js';
+import { formatDecimal, formatNombre, formatTemp, renderTable } from './ui-table.js';
+import { initTooltip, renderHeatmap } from './ui-heatmap.js';
+import { legendGradient } from './colors.js';
+import { buildHero } from './ui-hero.js';
 
 const $ = (id) => document.getElementById(id);
 const NOM_MESURE = { tx: 'Max', tn: 'Min', tm: 'Moy' };
@@ -20,7 +21,7 @@ const state = {
   series: null,
   settings: loadSettings(),
   year: Number(todayUtcIso().slice(0, 4)),
-  selected: null,
+  selected: loadSeuil(),
   sort: { key: 'threshold', dir: 'asc' },
   token: 0,
 };
@@ -38,37 +39,74 @@ function showError(msg) {
   el.hidden = !msg;
 }
 
+/** Seuil proposé par défaut : le plus extrême atteint sur les 365 derniers jours (le plus haut pour ≥, le plus bas pour ≤). */
+function seuilParDefaut(rows, direction) {
+  const atteints = rows.filter((r) => r.count365 > 0);
+  if (!atteints.length) return rows[Math.floor(rows.length / 2)].threshold;
+  return direction === 'le' ? atteints[0].threshold : atteints[atteints.length - 1].threshold;
+}
+
+/** Garde le seuil choisi ; s'il n'existe plus (changement de pas), prend le plus proche. */
+function seuilValide(rows, direction) {
+  if (state.selected == null) return seuilParDefaut(rows, direction);
+  return rows.reduce((best, r) => (Math.abs(r.threshold - state.selected) < Math.abs(best - state.selected) ? r.threshold : best), rows[0].threshold);
+}
+
 function render() {
   const { series, settings, city } = state;
   resumeReglages();
   $('rafraichir').disabled = !city;
+  $('titre-ville').textContent = city ? city.name : 'Seuils météo';
+  $('cal-ville').textContent = city ? city.name : '';
   if (!series || !series.tx.length) {
     $('table-wrap').replaceChildren();
+    $('hero').replaceChildren();
     $('calendrier').replaceChildren();
     $('cal-resume').textContent = '';
+    $('cal-meta').textContent = '';
     if (!city) $('statut').textContent = 'Choisissez une ville pour commencer.';
     return;
   }
   const fin = lastIso(series);
   const maj = series.updated ? new Date(series.updated).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' }) : '—';
-  $('statut').textContent = `${cityLabel(city)} · données jusqu'au ${formatLong(fin)} · mis à jour le ${maj}`;
+  const lieu = [city.admin1, city.country].filter(Boolean).join(', ');
+  $('statut').textContent = `${lieu ? `${lieu} · ` : ''}données au ${formatCourt(fin)} · mis à jour le ${maj}`;
 
   const rows = computeThresholds(series, { ...settings, refIso: fin });
-  if (state.selected != null && !rows.some((r) => r.threshold === state.selected)) state.selected = null;
+  state.selected = seuilValide(rows, settings.direction);
+  const ligne = rows.find((r) => r.threshold === state.selected);
+  const crit = `${NOM_MESURE[settings.measure]} ${settings.direction === 'ge' ? '≥' : '≤'} ${formatTemp(ligne.threshold)}`;
+
+  $('hero').replaceChildren(buildHero({
+    titre: `Dernière fois que ${crit}`,
+    threshold: ligne.threshold,
+    direction: settings.direction,
+    daysAgo: ligne.daysAgo,
+    lastIso: ligne.lastIso,
+    stats: ligne.lastIso
+      ? [{ valeur: formatNombre(ligne.count365), libelle: 'jours sur 365' }, { valeur: ligne.avgPerYear < 0.05 ? '< 0,1' : formatDecimal(ligne.avgPerYear), libelle: 'jours par an en moyenne' }]
+      : [],
+  }));
   renderTable($('table-wrap'), rows, {
     sort: state.sort,
     selected: state.selected,
     direction: settings.direction,
-    onSelect: (t) => { state.selected = t; render(); },
+    onSelect: (t) => {
+      state.selected = t;
+      saveSeuil(t);
+      render();
+      const zone = $('hero');
+      if (zone.getBoundingClientRect().top < 0) zone.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    },
   });
 
   renderYearSelect(series, fin);
-  const ligne = rows.find((r) => r.threshold === state.selected);
+  $('cal-meta').textContent = `${crit} · le seuil se choisit dans l'onglet Seuils`;
   const hits = renderHeatmap($('calendrier'), {
     series, year: state.year, measure: settings.measure, direction: settings.direction,
-    threshold: state.selected, lastIso: ligne?.lastIso ?? null,
+    threshold: state.selected, lastIso: ligne.lastIso ?? null,
   });
-  renderCalResume(ligne, hits);
+  renderCalResume(ligne, hits, crit);
 }
 
 function renderYearSelect(series, fin) {
@@ -85,18 +123,10 @@ function renderYearSelect(series, fin) {
   $('annee-suiv').disabled = state.year >= derniere;
 }
 
-function renderCalResume(ligne, hits) {
+function renderCalResume(ligne, hits, crit) {
   const el = $('cal-resume');
   el.replaceChildren();
-  if (!ligne) {
-    el.textContent = 'Touchez une ligne du tableau pour surligner les jours concernés.';
-    return;
-  }
-  const { measure, direction } = state.settings;
-  const crit = `${NOM_MESURE[measure]} ${direction === 'ge' ? '≥' : '≤'} ${formatTemp(ligne.threshold)}`;
-  const n = document.createElement('span');
-  n.textContent = `${hits} jour${hits > 1 ? 's' : ''} en ${state.year} (${crit}). `;
-  el.append(n);
+  el.append(`${hits} jour${hits > 1 ? 's' : ''} en ${state.year} (${crit}). `);
   if (!ligne.lastIso) { el.append('Ce seuil n’a jamais été atteint.'); return; }
   const an = Number(ligne.lastIso.slice(0, 4));
   el.append(`Dernière fois : ${formatLong(ligne.lastIso)}. `);
@@ -123,8 +153,8 @@ function setProgress(p) {
 async function ouvrirVille(city, { force = false } = {}) {
   const token = ++state.token;
   state.city = city;
-  state.selected = null;
   saveLastCity(city);
+  questions?.setDefaultCity(city);
   $('ville').value = cityLabel(city);
   showError('');
 
@@ -197,8 +227,8 @@ function initOnglets() {
   document.querySelectorAll('.tabbar [role="tab"]').forEach((t) => t.addEventListener('click', () => setView(t.dataset.view)));
 }
 
-// Tri : « Dernière fois » et les comptages commencent par le plus récent / le plus grand.
-const TRI_DEFAUT = { threshold: 'asc', lastIso: 'desc', count365: 'desc', avgPerYear: 'desc' };
+// Tri : « Dernière fois » commence par le plus récent.
+const TRI_DEFAUT = { threshold: 'asc', lastIso: 'desc' };
 
 function initTri() {
   const majSens = () => {

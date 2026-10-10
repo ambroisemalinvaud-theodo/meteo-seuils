@@ -1,12 +1,12 @@
 // Service worker : met les fichiers de l'app en cache pour l'ouvrir hors ligne.
 // ⚠️ À CHAQUE modification de l'app, changez VERSION (v1 -> v2 -> …) :
 // c'est ce qui déclenche la mise à jour sur le téléphone.
-const VERSION = 'v3';
+const VERSION = 'v4';
 const CACHE = `meteo-seuils-${VERSION}`;
 const FICHIERS = [
   './', './index.html', './manifest.webmanifest', './css/styles.css',
   './js/app.js', './js/api.js', './js/db.js', './js/settings.js', './js/dates.js', './js/series.js',
-  './js/thresholds.js', './js/store.js', './js/questions.js', './js/ui-questions.js', './js/ui-search.js', './js/ui-table.js', './js/ui-heatmap.js',
+  './js/thresholds.js', './js/store.js', './js/questions.js', './js/ui-questions.js', './js/colors.js', './js/ui-hero.js', './js/ui-search.js', './js/ui-table.js', './js/ui-heatmap.js',
   './icons/icon.svg', './icons/icon-192.png', './icons/icon-512.png', './icons/apple-touch-icon.png',
 ];
 

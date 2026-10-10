@@ -1,33 +1,10 @@
 // Calendrier annuel : une case par jour, colorée selon la mesure choisie.
-import { daysInMonth, formatLong, isoToDay, nomMois, pad2, weekdayMonday0 } from './dates.js';
+import { daysInMonth, formatLong, isoToDay, nomMoisCourt, pad2, weekdayMonday0 } from './dates.js';
 import { reaches } from './thresholds.js';
 import { seriesFor } from './series.js';
 import { formatTemp } from './ui-table.js';
 
-// Échelle de couleurs (°C -> RGB), identique pour Tx et Tn : bleu froid -> rouge chaud.
-const STOPS = [
-  [-10, [59, 76, 192]], [0, [124, 159, 249]], [10, [198, 218, 245]], [16, [245, 235, 190]],
-  [22, [250, 190, 120]], [30, [235, 110, 70]], [38, [190, 40, 40]], [45, [120, 10, 40]],
-];
-
-export function tempColor(v) {
-  if (v <= STOPS[0][0]) return `rgb(${STOPS[0][1]})`;
-  for (let i = 1; i < STOPS.length; i++) {
-    const [t1, c1] = STOPS[i];
-    if (v <= t1) {
-      const [t0, c0] = STOPS[i - 1];
-      const f = (v - t0) / (t1 - t0);
-      return `rgb(${c0.map((x, k) => Math.round(x + (c1[k] - x) * f)).join(',')})`;
-    }
-  }
-  return `rgb(${STOPS[STOPS.length - 1][1]})`;
-}
-
-export function legendGradient() {
-  const [a, b] = [-10, 40];
-  const pts = STOPS.filter(([t]) => t >= a && t <= b).map(([t]) => `${tempColor(t)} ${((t - a) / (b - a)) * 100}%`);
-  return `linear-gradient(90deg, ${tempColor(a)} 0%, ${pts.join(', ')}, ${tempColor(b)} 100%)`;
-}
+import { tempColor } from './colors.js';
 
 const JOURS = ['L', 'M', 'M', 'J', 'V', 'S', 'D'];
 const val = (arr, i) => (arr[i] == null || Number.isNaN(arr[i]) ? null : arr[i]);
@@ -43,7 +20,7 @@ export function renderHeatmap(root, { series, year, measure, direction, threshol
     const bloc = document.createElement('div');
     bloc.className = 'mois';
     const titre = document.createElement('h3');
-    titre.textContent = nomMois(m);
+    titre.textContent = nomMoisCourt(m);
     const jours = document.createElement('div');
     jours.className = 'jours-sem';
     JOURS.forEach((j) => { const s = document.createElement('span'); s.textContent = j; jours.append(s); });
